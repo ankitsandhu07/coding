@@ -1,0 +1,268 @@
+import 'package:flutter/material.dart';
+import 'dart:async';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Stopwatch, Timer & Calorie Tracker',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: StopWatchTimerScreen(),
+    );
+  }
+}
+
+class StopWatchTimerScreen extends StatefulWidget {
+  @override
+  _StopWatchTimerScreenState createState() => _StopWatchTimerScreenState();
+}
+
+class _StopWatchTimerScreenState extends State<StopWatchTimerScreen> {
+  // Stopwatch variables
+  Stopwatch _stopwatch = Stopwatch();
+  String _elapsedTime = "00:00:00";
+  late Timer _stopwatchTimer;
+
+  // Timer variables
+  final TextEditingController _timerController = TextEditingController();
+  int _remainingTime = 0;
+  String _timerDisplay = "00:00";
+  late Timer _timerInstance;
+
+  // Calorie Tracker variables
+  final TextEditingController _caloriesPerMinuteController = TextEditingController();
+  final TextEditingController _activityDurationController = TextEditingController();
+  String _caloriesBurned = "0";
+
+  // Stopwatch start function
+  void _startStopwatch() {
+    _stopwatch.start();
+    _stopwatchTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _elapsedTime = _formatTime(_stopwatch.elapsedMilliseconds);
+      });
+    });
+  }
+
+  // Stopwatch stop function
+  void _stopStopwatch() {
+    _stopwatch.stop();
+    _stopwatchTimer.cancel();
+  }
+
+  // Stopwatch reset function
+  void _resetStopwatch() {
+    _stopwatch.reset();
+    setState(() {
+      _elapsedTime = "00:00:00";
+    });
+  }
+
+  // Timer start function
+  void _startTimer() {
+    final timeInSeconds = int.tryParse(_timerController.text) ?? 0;
+    if (timeInSeconds > 0) {
+      setState(() {
+        _remainingTime = timeInSeconds;
+        _timerDisplay = _formatTime(_remainingTime * 1000);
+      });
+
+      _timerInstance = Timer.periodic(Duration(seconds: 1), (timer) {
+        if (_remainingTime == 0) {
+          timer.cancel();
+        } else {
+          setState(() {
+            _remainingTime--;
+            _timerDisplay = _formatTime(_remainingTime * 1000);
+          });
+        }
+      });
+    }
+  }
+
+  // Timer reset function
+  void _resetTimer() {
+    setState(() {
+      _remainingTime = 0;
+      _timerDisplay = "00:00";
+    });
+    _timerInstance.cancel();
+  }
+
+  // Helper function to format time
+  String _formatTime(int milliseconds) {
+    int seconds = (milliseconds / 1000).floor();
+    int minutes = (seconds / 60).floor();
+    seconds = seconds % 60;
+    return '${_twoDigits(minutes)}:${_twoDigits(seconds)}';
+  }
+
+  // Helper function to ensure two-digit formatting
+  String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+  // Calorie tracking function
+  void _calculateCaloriesBurned() {
+    final caloriesPerMinute = double.tryParse(_caloriesPerMinuteController.text) ?? 0;
+    final activityDuration = int.tryParse(_activityDurationController.text) ?? 0;
+
+    if (caloriesPerMinute > 0 && activityDuration > 0) {
+      setState(() {
+        _caloriesBurned = (caloriesPerMinute * activityDuration).toStringAsFixed(2);
+      });
+    } else {
+      setState(() {
+        _caloriesBurned = "0";
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Stopwatch, Timer & Calorie Tracker'),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Stopwatch Section
+              _buildSectionTitle('Stopwatch'),
+              _buildCircleContainer(
+                _elapsedTime,
+                Colors.blueAccent,
+                48,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildActionButton('Start', _startStopwatch),
+                  SizedBox(width: 20),
+                  _buildActionButton('Stop', _stopStopwatch),
+                  SizedBox(width: 20),
+                  _buildActionButton('Reset', _resetStopwatch),
+                ],
+              ),
+              SizedBox(height: 40),
+
+              // Timer Section
+              _buildSectionTitle('Timer (Enter seconds)'),
+              _buildCircleContainer(
+                _timerDisplay,
+                Colors.greenAccent,
+                48,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: TextField(
+                  controller: _timerController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Enter Time (in seconds)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildActionButton('Start Timer', _startTimer),
+                  SizedBox(width: 20),
+                  _buildActionButton('Reset Timer', _resetTimer),
+                ],
+              ),
+              SizedBox(height: 40),
+
+              // Calorie Tracker Section
+              _buildSectionTitle('Calorie Tracker'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: TextField(
+                  controller: _caloriesPerMinuteController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Calories per minute',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: TextField(
+                  controller: _activityDurationController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Activity Duration (minutes)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _calculateCaloriesBurned,
+                child: Text('Calculate Calories'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  backgroundColor: Colors.black,  // Button color changed to black
+                  foregroundColor: Colors.white,  // Text color changed to white
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                'Total Calories Burned: $_caloriesBurned kcal',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Build Section Title
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Text(
+        title,
+        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  // Build Circle Container
+  Widget _buildCircleContainer(String displayText, Color color, double fontSize) {
+    return Container(
+      padding: EdgeInsets.all(30),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+      ),
+      child: Text(
+        displayText,
+        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+    );
+  }
+
+  // Build Action Button
+  Widget _buildActionButton(String text, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      child: Text(text),
+      style: ElevatedButton.styleFrom(
+        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+        backgroundColor: Colors.black,  // Button color changed to black
+        foregroundColor: Colors.white,  // Text color changed to white
+      ),
+    );
+  }
+}
